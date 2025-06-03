@@ -1,0 +1,71 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- github.com/kubeflow/manifests/common/knative/knative-serving/base?ref=v1.7.0
+- github.com/kubeflow/manifests/common/knative/knative-eventing/base?ref=v1.7.0
+
+patchesStrategicMerge:
+- config-domain.yaml
+- config-istio.yaml
+
+patches:
+- path: istio-webhook-deployment-patch.json
+  target:
+    kind: Deployment
+    name: net-istio-webhook
+    version: v1
+
+- path: networking-istio-deployment-patch.json
+  target:
+    kind: Deployment
+    name: net-istio-controller
+    version: v1
+
+- path: webhook-deployment-patch.json
+  target:
+    kind: Deployment
+    name: webhook
+    version: v1
+
+- path: namespace_patch.json
+  target:
+    kind: Namespace
+    name: knative-eventing
+    version: v1
+
+- path: namespace_patch.json
+  target:
+    kind: Namespace
+    name: knative-serving
+    version: v1
+
+## Cert Manager
+patchesJson6902:
+  - target:
+      group: cert-manager.io
+      version: v1alpha2
+      kind: 'Certificate|Issuer'
+      name: '.*'
+    patch: |-
+      - op: replace
+        path: "/apiVersion"
+        value: cert-manager.io/v1
+  - target:
+      group: autoscaling
+      version: v2beta2
+      kind: 'HorizontalPodAutoscaler'
+      name: 'activator|eventing-webhook|webhook'
+    patch: |-
+      - op: replace
+        path: "/spec/minReplicas"
+        value: 3
+  - target:
+      group: policy
+      version: 'v1beta1|v1'
+      kind: PodDisruptionBudget
+      name: 'activator-pdb|webhook-pdb|eventing-webhook'
+    patch: |-
+      - op: replace
+        path: "/spec/minAvailable"
+        value: 2

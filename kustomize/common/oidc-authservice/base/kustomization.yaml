@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- github.com/kubeflow/manifests/common/oidc-authservice/base?ref=v1.7.0
+
+patchesJson6902:
+- target:
+    group: networking.istio.io
+    version: v1alpha3
+    kind: EnvoyFilter
+    name: authn-filter
+  path: envoyfilter-patch.json
+
+patchesStrategicMerge:
+- statefulset.yaml
+- secret.yaml
+- |-
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: oidc-authservice-parameters
+  $patch: delete
